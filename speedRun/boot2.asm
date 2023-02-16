@@ -5,7 +5,9 @@ jmp 0x0000:start
 ;utilizar o método de shift left (hexadecimal)
 ;e somar o offset no adress base, para rodarmos o kernel.
 
-runningKernel db 'Rodando Kernel...', 0
+mensagem1 db 'Chamando Rafa...', 0
+mensagem2 db 'Despindo Rafa...', 0
+mensagem3 db 'Colocando a tanga em Rafa', 0
 
 
 print_string:
@@ -14,7 +16,7 @@ print_string:
 	je end
 
 	mov ah, 0eh
-	mov bl, 15
+	mov bl, 6
 	int 10h
 
 	mov dx, 0
@@ -43,12 +45,25 @@ start:
     xor ax, ax
     mov ds, ax
     mov es, ax
+    
+    mov ah, 0 
+	mov al, 12h
+	int 10h ;setando modo gráfico
 
+    
+	mov ah,0xb
+	mov bh, 0
+	mov bl, 7 ; COR DO FUNDO DE TELA (CINZA)
+	int 10h ; 
 
     ;parte pra printar as mensagens que quisermos
 
 
-    mov si, runningKernel
+    mov si, mensagem1
+    call print_string
+    mov si, mensagem2
+    call print_string
+    mov si, mensagem3
     call print_string
 
 
