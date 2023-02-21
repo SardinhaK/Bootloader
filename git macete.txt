@@ -1,0 +1,28 @@
+/////// CRIANDO EXECUTÁVEL E RODANDO //////////
+
+nasm -f bin arquivo.asm -o saida.bin
+qemu-system-i386 saida.bin
+
+////// INSTALALNDO ////////
+
+sudo apt install git #INSTALANDO O GIT NO PC
+
+git clone https://github.com/SardinhaK/Bootloader #CLONANDO REPOSITÓRIO DE SARDAS
+
+
+////// DESENVOLVENDO ///////
+
+git pull #ATUALIZAR O LOCAL A PARTIR DA ULTIMA ATT
+
+git add . #ADICIONAR TODAS ATT PARA O PRÓXIMO COMMIT
+
+git commit -m "informações doq mexeu" #ADICIONAR AS MUDANÇAS AO PROJETO
+
+git push #ATUALIZAR O REPOSITÓRIO COM OQ MUDOU
+
+
+////// DEU ERRADO COMO VOLTAR ////////////
+
+git tag #VERIFICAR VERSÕES ANTERIORAS DO PROJETO
+
+git checkout x #SELECIONAR O NOME DA VERSÃO E POR EM X PARA VOLTAR PARA ELA 
