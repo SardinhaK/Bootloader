@@ -5,9 +5,11 @@ jmp 0x0000:start
 ;utilizar o método de shift left (hexadecimal)
 ;e somar o offset no adress base, para rodarmos o kernel.
 
-mensagem1 db 'Chamando Rafa...', 0
-mensagem2 db 'Despindo Rafa...', 0
-mensagem3 db 'Colocando a tanga em Rafa', 0
+
+mensagem1 db 'BETRACHTUNG...', 0
+mensagem2 db 'Eh uma palavra em alemao...', 0
+mensagem3 db 'para REFLEXO', 0
+
 
 
 print_string:
