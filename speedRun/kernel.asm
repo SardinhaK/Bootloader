@@ -4,10 +4,14 @@ jmp 0x0000:Titulo
 ; VARIAVEIS USADAS NO KERNEL
 data:
 
-  random_seed dd 0 ;SEED ALEATORIA
+  ;SEED ALEATORIA
+    random_seed dd 0
 
-;TITULO
-    nomeDoGame dw '             BETRACHTUNG', 0
+  ;SAVE NUMBER
+    save dd 0
+
+  ;TITULO
+    nomeDoGame dw '              BETRACHTUNG', 0
     press dw      '     pressione enter para continuar!', 0
 
   ;MENU
@@ -24,7 +28,7 @@ data:
     comoJogar6 dw 'Quanto mais rapido voce apertar ', 0
     comoJogar7 dw 'ESPACO',0
     comoJogar8 dw 'mais pontos tera no fim.', 0
-  
+
   ;CREDITOS
     credito1 dw 'Desenvolvido para a cadeira de:  ', 0
     credito2 dw '      INFRAESTRUTURA DE SOFTWARE', 0
@@ -38,14 +42,19 @@ data:
     creditoR dw '            Enter para retornar ao Menu', 0
 
   ;EM GAME
-    contador dw 1000
+    num dw 0
+    contador dw 0x2710
     jogo1 dw '                    ESPERE', 0
     jogo2 dw '                     AGORA', 0 
-    jogo3 dw 'Sua pontuacao foi: ', 0
-
-    MAX_TIME equ 5000 ; Define a constante MAX_TIME com o valor 5000 (em milissegundos)
-       
+    jogo3 dw '                         SUA PONTUACAO FOI DE: ', 0
+    lento dw '                                 Voce tentou?', 0
+      
 ;FUNÇÕES USADAS
+clear_buffer:
+    xor ah, ah      ; função 0Ah da interrupção 16h
+    mov al, 0       ; limpa o buffer do teclado
+    int 16h         ; chama a interrupção
+    ret
 
 ; gera um número aleatório entre min_val e max_val
 generate_random_number:
@@ -53,15 +62,14 @@ generate_random_number:
   imul eax, 1103515247      ; multiplica a seed por uma constante grande
   add eax, 12349           ; adiciona uma constante
   mov [random_seed], eax    ; salva a nova seed
-
   mov ebx, 7                ; define o limite
   xor edx, edx              ; limpa edx (resto)
   div ebx                   ; divide eax por 7, o resto vai pra edx
   inc edx                   ; adiciona 1 no resto para obter o random
-
   mov eax, edx              ;salva o random em eax
   ret
 
+;Dado da imagem em SI para printar
 printImagem:
   xor ax, ax
   mov ds, ax
@@ -94,12 +102,61 @@ printImagem:
 		jmp .for1
 	.endfor1:
   ret
+
+
+Print_Decimal:
+  ; converte o valor de hexadecimal para decimal
+  xor bl, bl   ;contador de digitos
+  mov cx, 0x2710; cx é o divisor (inicialmente 10000)
+
+  convert_loop:
+    xor dx, dx      ; zera dx
+    div cx          ; AX = AX/CX    (RESULTADO EM AX E RESTO EM DX)
+    ;mov al, ah      ; caractere a ser exibido vai pra al
+    add al, 30h     ; converte o valor do dígito em ASCII
+    mov ah, 0x0e    ; função da interrupção de software 21h para exibir um caractere
+    push bx         ; empilha o valor dos 3 registradores do 'B'
+    mov bl, 15      ; cor da fonte para branco
+    int 10h         ; interrupção de software para exibir o caractere
+    pop bx          ; desempilha o valor dos 3 registradores do 'B'
+    inc bl          ; incrementa o contador
+    mov ax, dx      ; passa pra ax o valor do resto
+    cmp bl, 1
+    je milhar
+    cmp bl, 2
+    je centena
+    cmp bl, 3
+    je dezena
+    cmp bl, 4
+    je unidade
+    jmp end1
+
+    milhar:
+        mov cx, 0x3e8
+        jmp convert_loop
+
+    centena:
+        mov cx, 0x64
+        jmp convert_loop
+
+    dezena:
+        mov cx, 0xa
+        jmp convert_loop
+
+    unidade:
+        mov cx, 0x1
+        jmp convert_loop
+
+  ; finaliza o programa
+  end1:
+    ret
   
+
 putchar:    ;Printa um caractere na tela, pega o valor salvo em al
   mov ah, 0x0e
   int 10h
   ret
-    
+  
 getchar:    ;Pega o caractere lido no teclado e salva em al
   mov ah, 0x00
   int 16h
@@ -133,17 +190,16 @@ Espacamento:
     cmp bh, 0    ; Compara bh com zero
     je exit_loop    ; Se zerar vai pro final
     jmp loop_Espaco ; Caso contrário loop novamente
-
   exit_loop:
     ret         ; Retorna pro ponto de chamada
 
 prints:             ; mov si, string
   .loop:
-      lodsb           ; bota character apontado por si em al 
-      cmp al, 0       ; 0 é o valor atribuido ao final de uma string
-      je .endloop     ; Se for o final da string, acaba o loop
-      call putchar    ; printa o caractere
-      jmp .loop       ; volta para o inicio do loop
+    lodsb           ; bota character apontado por si em al 
+    cmp al, 0       ; 0 é o valor atribuido ao final de uma string
+    je .endloop     ; Se for o final da string, acaba o loop
+    call putchar    ; printa o caractere
+    jmp .loop       ; volta para o inicio do loop
   .endloop:
   ret
 
@@ -178,31 +234,30 @@ esperaOenter:
   ret
   
 print_word:
-    push bx             ; salva a base na pilha
-    xor cx, cx          ; zera o contador
-    mov si, 10          ; carrega o divisor
-    div_loop:
-        xor dx, dx      ; zera o registro DX
-        div si          ; divide DX:AX pelo divisor
-        add dl, '0'     ; converte o resto em um caractere ASCII
-        push dx         ; salva o caractere na pilha
-        inc cx          ; incrementa o contador
-        cmp ax, 0       ; verifica se a divisão já foi concluída
-        jne div_loop    ; se não, repete o loop
-    print_loop:
-        pop dx          ; carrega o próximo caractere da pilha
-        mov ah, 0x0e    ; função para imprimir caractere na tela
-        int 0x10        ; chama a interrupção para imprimir o caractere
-        loop print_loop ; repete o loop enquanto ainda houver caracteres na pilha
-    pop bx              ; restaura a base da pilha
-    ret
+  push bx             ; salva a base na pilha
+  xor cx, cx          ; zera o contador
+  mov si, 10          ; carrega o divisor
+  div_loop:
+    xor dx, dx      ; zera o registro DX
+    div si          ; divide DX:AX pelo divisor
+    add dl, '0'     ; converte o resto em um caractere ASCII
+    push dx         ; salva o caractere na pilha
+    inc cx          ; incrementa o contador
+    cmp ax, 0       ; verifica se a divisão já foi concluída
+    jne div_loop    ; se não, repete o loop
+  print_loop:
+    pop dx          ; carrega o próximo caractere da pilha
+    mov ah, 0x0e    ; função para imprimir caractere na tela
+    int 0x10        ; chama a interrupção para imprimir o caractere
+    loop print_loop ; repete o loop enquanto ainda houver caracteres na pilha
+  pop bx              ; restaura a base da pilha
+  ret
 
 
 ;TELA DE TITULO
 Titulo:
-
   ;DEFININDO O MODO DE VIDEO
-  mov ah, 0      ; ALTERANDO A RESOLUÇÃO E TAMANHO DAS LETRAS
+  mov ah, 0
   mov al, 13h
   int 10h
 
@@ -281,53 +336,114 @@ play:
     
     call generate_random_number ;random em ax
     mov bl, al
-
-    loop_delay:
-      call delay1s
-      dec bl
-      cmp bl, 0
-      jle continue
-      jmp loop_delay
+    call delay1s
+  ;loop_delay:
+  ;  call delay1s
+  ;  dec bl
+  ;  cmp bl, 0
+  ;  jle continue
+  ;  jmp loop_delay
     
-    continue:  
-      call clear
-      mov ah,0xb
-      mov bh, 0
-      mov bl, 2 ; COR DO FUNDO DE TELA (VERDE)
-      int 10h ; 
+  continue: 
+    call clear
+    mov ah,0xb
+    mov bh, 0
+    mov bl, 2 ; COR DO FUNDO DE TELA (VERDE)
+    int 10h ; 
 
-      mov bh, 12 ;numero de espaços
-      call Espacamento ;pulanndo 12 espaços
-      mov bl, 15
-      int 10h
-      mov si, jogo2
-      call prints
-      mov dx, contador
-    esperandoClique:
-      call getchar
-      cmp al, 0x20
-      je pontoTotal
-      sub dx, 1
+    mov bh, 12 ;numero de espaços
+    call Espacamento ;pulanndo 12 espaços
+    mov bl, 15
+    int 10h
+    mov si, jogo2
+    call prints
+
+    ;DEFINE
+    mov cx, 0
+    mov dx, 0
+    
+  esperandoClique:
+
+    in al, 0x64       ; Lê a porta do status do teclado
+    test al, 0x01     ; Verifica se o bit 0 está definido (entrada disponível)
+    jz sem_entrada    ; Se o bit 0 não estiver definido, saia sem ler entrada
+    
+    call getchar 	; USA: (A)
+    cmp al, 0x20
+    push cx 
+    jmp pontoTotal
+
+    sem_entrada:
+      add dx, 1
+      cmp dx, 65500
+      ja umCiclo
+      jmp esperandoClique	
+    
+    umCiclo:
+      mov dx, 0
+      add cx, 13
+      cmp cx, 10000
+      ja muitoLento
       jmp esperandoClique
+  
+  pontoTotal:
+    call clear 		; USA: (A, B, C, D)
+    mov ah, 0xb
+    mov bh, 0
+    mov bl, 1 		; COR DO FUNDO DE TELA (AZUL)
+    int 10h ; 
+    
+    mov bh, 12 		; numero de espaços
+    call Espacamento 	; pulando 2 espaços --  USA: (B)
+    mov bl, 15 		; COR da letra
+    int 10h
+    mov si, jogo3
+    call prints 	; USA: (A)
+    
+    ;CALCULANDO PONTUAÇÃO E EXIBINDO
+    mov dx, 10000
+    pop cx
+    sub dx, cx
+    mov ax, dx
+    call Print_Decimal
+    
+    mov bh, 12 ;numero de espaços
+    call Espacamento ;pulanndo 12 espaços
+
+    mov bl, 15
+    int 10h
+    mov si, creditoR
+    call prints
 
 
-    pontoTotal:
-      call clear
-      mov ah,0xb
-      mov bh, 0
-      mov bl, 1 ; COR DO FUNDO DE TELA (VERDE)
-      int 10h ; 
-      
-      call endl
-      call endl
-      mov bl, 15 ; COR da letra
-      int 10h ; 
-      mov si, jogo3
-      call prints
-      mov si, dx
-      call prints
-      call esperaOenter
-      jmp Titulo
+    call esperaOenter
+    jmp Titulo
+  
+  muitoLento:
+    call clear 		; USA: (A, B, C, D)
+    mov ah, 0xb
+    mov bh, 0
+    mov bl, 6 		; COR DO FUNDO DE TELA (AZUL)
+    int 10h ; 
+
+    mov bh, 12 		; numero de espaços
+    call Espacamento 	; pulando 2 espaços --  USA: (B)
+    mov bl, 15 		; COR da letra
+    int 10h
+    mov si, lento
+    call prints 	; USA: (A)
+
+    mov bh, 12 ;numero de espaços
+    call Espacamento ;pulanndo 12 espaços
+
+    mov bl, 15
+    int 10h
+    mov si, creditoR
+    call prints
+
+
+    call esperaOenter
+    jmp Titulo
 
 ;TELA DE COMANDOS
 comando:
@@ -337,8 +453,8 @@ comando:
   int 10h
   mov si, comoJogar1
   call prints
-  call endl
-  call endl
+  mov bh, 2 ;numero de espaços
+  call Espacamento ;pulanndo 2 espaços
   mov si, comoJogar2
   call prints
   call endl
@@ -352,8 +468,8 @@ comando:
   int 10h
   mov si, comoJogar5
   call prints
-  call endl
-  call endl
+  mov bh, 2 ;numero de espaços
+  call Espacamento ;pulanndo 2 espaços
   mov si, comoJogar6
   call prints 
   mov bl, 4
@@ -386,8 +502,8 @@ credito:
   mov bl, 4
   int 10h
   mov si, credito2
-  call endl
-  call endl
+  mov bh, 2 ;numero de espaços
+  call Espacamento ;pulanndo 2 espaços
   call prints
   mov bh, 4 ;numero de espaços
   call Espacamento ;pulanndo 4 espaços
@@ -405,8 +521,8 @@ credito:
   int 10h
   mov si, credito5
   call prints
-  call endl
-  call endl
+  mov bh, 2 ;numero de espaços
+  call Espacamento ;pulanndo 2 espaços
   mov bl, 1
   int 10h
   mov si, credito6
@@ -439,4 +555,3 @@ credito:
 
 done:
   jmp $
-
