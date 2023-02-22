@@ -336,13 +336,12 @@ play:
     
     call generate_random_number ;random em ax
     mov bl, al
+  loop_delay:
     call delay1s
-  ;loop_delay:
-  ;  call delay1s
-  ;  dec bl
-  ;  cmp bl, 0
-  ;  jle continue
-  ;  jmp loop_delay
+    dec bl
+    cmp bl, 0
+    jle continue
+    jmp loop_delay
     
   continue: 
     call clear
@@ -368,10 +367,10 @@ play:
     test al, 0x01     ; Verifica se o bit 0 está definido (entrada disponível)
     jz sem_entrada    ; Se o bit 0 não estiver definido, saia sem ler entrada
     
+    push cx 
     call getchar 	; USA: (A)
     cmp al, 0x20
-    push cx 
-    jmp pontoTotal
+    je pontoTotal
 
     sem_entrada:
       add dx, 1
