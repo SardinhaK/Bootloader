@@ -1,3 +1,7 @@
+<<<<<<< HEAD
 Emanoel Thyago Cordeiro dos Santos - etcs
 Rafael Ramos Batista Corcino - rrbc
 Péricles Ferreira Sardinha - pfs
+=======
+foi só eu
+>>>>>>> bb443f612646db5e65c9f0d96621ee6e5eb15438
